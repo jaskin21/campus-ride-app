@@ -1,0 +1,1 @@
+// intentionally empty — types live in src/features/auth/authTypes.ts
