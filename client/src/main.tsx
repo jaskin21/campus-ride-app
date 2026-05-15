@@ -1,9 +1,8 @@
+import './lib/amplifyConfig'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Provider } from 'react-redux'
 import { store } from './app/store'
-import '../src/lib/amplifyConfig'
-import './lib/amplifyConfig'
 import './index.css'
 import App from './App'
 

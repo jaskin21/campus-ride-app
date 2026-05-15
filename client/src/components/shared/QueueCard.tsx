@@ -1,4 +1,4 @@
-import type { QueueEntry } from '../../lib/mockData'
+import type { QueueEntry } from '../../features/queue/queueTypes'
 
 interface QueueCardProps {
   readonly queue: QueueEntry | null

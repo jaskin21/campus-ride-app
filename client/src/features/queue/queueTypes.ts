@@ -1,7 +1,10 @@
 export interface QueueEntry {
   position: number
   userId: string
+  stopId?: string
+  stopName?: string
   destination: string
+  eta?: number
   joinedAt: string
 }
 

@@ -20,13 +20,28 @@ export const Keys = {
 
   userQueueState: (userId: string) => ({
     PK: `USER#${userId}`,
-    SK: 'QUEUE#ACTIVE',
+    SK: "QUEUE#ACTIVE",
   }),
 
   stopMeta: (stopId: string) => ({
     PK: `STOP#${stopId}`,
-    SK: 'METADATA',
+    SK: "METADATA",
   }),
-}
 
-export const TABLE_NAME = process.env.TABLE_NAME ?? ''
+  vanPosition: (vanId: string) => ({
+    PK: `VAN#${vanId}`,
+    SK: "POSITION",
+  }),
+
+  vanSimulation: (vanId: string) => ({
+    PK: `VAN#${vanId}`,
+    SK: "SIMULATION",
+  }),
+
+  stop: (stopId: string) => ({
+    PK: `STOP#${stopId}`,
+    SK: "METADATA",
+  }),
+};
+
+export const TABLE_NAME = process.env.TABLE_NAME ?? "";

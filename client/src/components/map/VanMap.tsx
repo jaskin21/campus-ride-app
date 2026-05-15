@@ -62,8 +62,8 @@ export default function VanMap({ stops, van, userStopId }: VanMapProps) {
         className="z-0"
       >
         <TileLayer
-          attribution="&copy; OpenStreetMap"
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          attribution="&copy; Esri"
+          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
         />
         <ZoomControl position="topright" />
 

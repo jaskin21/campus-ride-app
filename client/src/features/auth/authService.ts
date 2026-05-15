@@ -5,24 +5,21 @@ import {
   confirmSignUp,
   getCurrentUser,
   fetchAuthSession,
-} from "aws-amplify/auth";
+  resendSignUpCode,
+} from 'aws-amplify/auth'
 
 export const authService = {
   async login(email: string, password: string) {
-    return await signIn({ username: email, password });
+    return await signIn({
+      username: email,
+      password,
+      options: {
+        authFlowType: 'USER_PASSWORD_AUTH',
+      },
+    })
   },
 
-  async resendCode(email: string) {
-  const { resendSignUpCode } = await import('aws-amplify/auth')
-  return await resendSignUpCode({ username: email })
-},
-
-  async register(
-    email: string,
-    password: string,
-    firstName: string,
-    lastName: string,
-  ) {
+  async register(email: string, password: string, firstName: string, lastName: string) {
     return await signUp({
       username: email,
       password,
@@ -33,22 +30,26 @@ export const authService = {
           family_name: lastName,
         },
       },
-    });
+    })
   },
 
   async confirmCode(email: string, code: string) {
-    return await confirmSignUp({ username: email, confirmationCode: code });
+    return await confirmSignUp({ username: email, confirmationCode: code })
+  },
+
+  async resendCode(email: string) {
+    return await resendSignUpCode({ username: email })
   },
 
   async logout() {
-    return await signOut();
+    return await signOut()
   },
 
   async getCurrentUser() {
-    return await getCurrentUser();
+    return await getCurrentUser()
   },
 
   async getSession() {
-    return await fetchAuthSession();
+    return await fetchAuthSession({ forceRefresh: true })
   },
-};
+}
