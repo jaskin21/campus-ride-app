@@ -21,10 +21,10 @@ const adminNav: NavItem[] = [
 ];
 
 const driverNav: NavItem[] = [
-  { label: "Map", icon: "🗺️", path: "/driver/panel" },
-  { label: "Boarding", icon: "🚐", path: "/driver/boarding" },
-  { label: "Profile", icon: "👤", path: "/driver/profile" },
-];
+  { label: 'Map', icon: '🗺️', path: '/driver/panel' },
+  { label: 'Boarding', icon: '🚐', path: '/driver/boarding' },
+  { label: 'Profile', icon: '👤', path: '/driver/profile' },
+]
 
 export default function BottomNav() {
   const location = useLocation();

@@ -8,7 +8,7 @@ import * as targets from "aws-cdk-lib/aws-events-targets";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { Construct } from "constructs";
 import * as path from "node:path";
-import * as ssm from "aws-cdk-lib/aws-ssm";
+import * as iam from "aws-cdk-lib/aws-iam";
 
 interface ApiStackProps extends cdk.StackProps {
   table: dynamodb.Table;
@@ -136,24 +136,24 @@ export class ApiStack extends cdk.Stack {
       },
     );
 
-    // Get Groq API key from SSM
-    const groqApiKey = ssm.StringParameter.valueFromLookup(
-      this,
-      "/campusride/dev/GROQ_API_KEY",
-    );
-
     const jarvisChatFn = new NodejsFunction(this, "JarvisChatFn", {
       ...lambdaDefaults,
       entry: path.join(__dirname, "../lambdas/jarvis/chat.ts"),
       handler: "handler",
-      environment: {
-        ...lambdaEnv,
-        GROQ_API_KEY: groqApiKey,
-      },
       bundling: {
         externalModules: ["@aws-sdk/*"],
         forceDockerBundling: false,
         nodeModules: ["groq-sdk"],
+      },
+    });
+
+    const getStudentsFn = new NodejsFunction(this, "GetStudentsFn", {
+      ...lambdaDefaults,
+      entry: path.join(__dirname, "../lambdas/admin/getStudents.ts"),
+      handler: "handler",
+      environment: {
+        ...lambdaEnv,
+        USER_POOL_ID: props.userPool.userPoolId,
       },
     });
 
@@ -200,6 +200,25 @@ export class ApiStack extends cdk.Stack {
 
     // ─── Queue Routes ─────────────────────────────────
     const queueResource = api.root.addResource("queue");
+
+    jarvisChatFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["ssm:GetParameter"],
+        resources: [
+          `arn:aws:ssm:ap-southeast-1:*:parameter/campusride/dev/GROQ_API_KEY`,
+        ],
+      }),
+    );
+
+    props.userPool.grant(getStudentsFn, "cognito-idp:ListUsersInGroup");
+
+    const adminResource = api.root.addResource("admin");
+    adminResource
+      .addResource("students")
+      .addMethod("GET", new apigw.LambdaIntegration(getStudentsFn), {
+        authorizer,
+        authorizationType: apigw.AuthorizationType.COGNITO,
+      });
 
     queueResource
       .addResource("join")

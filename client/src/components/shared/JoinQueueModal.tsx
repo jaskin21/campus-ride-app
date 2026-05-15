@@ -1,5 +1,11 @@
-import { useState } from 'react'
-import { MOCK_STOPS } from '../../lib/mockData'
+import { useState, useEffect } from 'react'
+import { fetchAuthSession } from 'aws-amplify/auth'
+
+interface Stop {
+  id: string
+  name: string
+  active: boolean
+}
 
 interface JoinQueueModalProps {
   readonly isOpen: boolean
@@ -16,8 +22,31 @@ export default function JoinQueueModal({
 }: JoinQueueModalProps) {
   const [selectedStop, setSelectedStop] = useState('')
   const [selectedDestination, setSelectedDestination] = useState('')
+  const [stops, setStops] = useState<Stop[]>([])
 
-  const availableDestinations = MOCK_STOPS.filter(
+  useEffect(() => {
+    if (!isOpen) return
+
+    const fetchStops = async () => {
+      try {
+        const session = await fetchAuthSession()
+        const token = session.tokens?.idToken?.toString() ?? ''
+        const res = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/stops`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+        if (!res.ok) return
+        const data = await res.json()
+        setStops(data.stops ?? [])
+      } catch {
+        // silent fail
+      }
+    }
+
+    fetchStops()
+  }, [isOpen])
+
+  const availableDestinations = stops.filter(
     (s) => s.active && s.id !== selectedStop
   )
 
@@ -59,42 +88,45 @@ export default function JoinQueueModal({
           </button>
         </div>
 
-        {/* Stop selection */}
-        <div className="mb-4">
-          <label
-            htmlFor="stop"
-            className="text-zinc-400 text-sm mb-2 block"
-          >
-            Your current stop
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            {MOCK_STOPS.filter((s) => s.active).map((stop) => (
-              <button
-                key={stop.id}
-                type="button"
-                onClick={() => {
-                  setSelectedStop(stop.id)
-                  setSelectedDestination('')
-                }}
-                className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left ${
-                  selectedStop === stop.id
-                    ? 'bg-yellow-400 text-zinc-950'
-                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                }`}
-              >
-                {stop.name}
-              </button>
-            ))}
+        {/* Loading state */}
+        {stops.length === 0 && (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400" />
           </div>
-        </div>
+        )}
+
+        {/* Stop selection */}
+        {stops.length > 0 && (
+          <div className="mb-4">
+            <label htmlFor="stop" className="text-zinc-400 text-sm mb-2 block">
+              Your current stop
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {stops.filter((s) => s.active).map((stop) => (
+                <button
+                  key={stop.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedStop(stop.id)
+                    setSelectedDestination('')
+                  }}
+                  className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left ${
+                    selectedStop === stop.id
+                      ? 'bg-yellow-400 text-zinc-950'
+                      : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                  }`}
+                >
+                  {stop.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Destination selection */}
         {selectedStop && (
           <div className="mb-6">
-            <label
-              htmlFor="destination"
-              className="text-zinc-400 text-sm mb-2 block"
-            >
+            <label htmlFor="destination" className="text-zinc-400 text-sm mb-2 block">
               Destination
             </label>
             <div className="grid grid-cols-2 gap-2">

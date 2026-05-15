@@ -7,6 +7,8 @@ const initialState: QueueState = {
   position: null,
   joinedAt: null,
   isInQueue: false,
+  isBoarded: false,
+  boardedAt: null,
 }
 
 const queueSlice = createSlice({
@@ -22,8 +24,15 @@ const queueSlice = createSlice({
     updatePosition(state, action: PayloadAction<number>) {
       state.position = action.payload
     },
+    setBoarded(state) {
+      state.isBoarded = true
+      state.boardedAt = new Date().toISOString()
+    },
+    setOffboarded() {
+      return initialState
+    },
   },
 })
 
-export const { setQueue, clearQueue, updatePosition } = queueSlice.actions
+export const { setQueue, clearQueue, updatePosition, setBoarded, setOffboarded } = queueSlice.actions
 export default queueSlice.reducer

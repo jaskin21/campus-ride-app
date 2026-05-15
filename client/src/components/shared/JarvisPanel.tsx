@@ -1,58 +1,87 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from "react";
+import { fetchAuthSession } from "aws-amplify/auth";
 
 interface Message {
-  role: 'user' | 'jarvis'
-  text: string
+  role: "user" | "jarvis";
+  text: string;
 }
 
 interface JarvisPanelProps {
-  readonly isOpen: boolean
-  readonly onClose: () => void
+  readonly isOpen: boolean;
+  readonly onClose: () => void;
 }
 
-const MOCK_RESPONSES: Record<string, string> = {
-  default: "I'm Jarvis, your CampusRide assistant! I can help you with van ETAs, queue info, and campus directions.",
-  eta: "The van is about 4 minutes away from Main Gate. There are 5 students ahead of you.",
-  queue: "You're currently #3 in line at Main Gate. The van fits 10 passengers.",
-  stop: "BE Building has the shortest queue right now with 2 students waiting.",
-}
-
-function getMockResponse(input: string): string {
-  const lower = input.toLowerCase()
-  if (lower.includes('eta') || lower.includes('long') || lower.includes('arrive')) return MOCK_RESPONSES.eta
-  if (lower.includes('queue') || lower.includes('ahead') || lower.includes('line')) return MOCK_RESPONSES.queue
-  if (lower.includes('stop') || lower.includes('short') || lower.includes('least')) return MOCK_RESPONSES.stop
-  return MOCK_RESPONSES.default
+async function sendToJarvis(
+  message: string,
+  history: Message[],
+  token: string,
+): Promise<string> {
+  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/jarvis/chat`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      message,
+      history: history.map((m) => ({
+        role: m.role === "jarvis" ? "assistant" : "user",
+        content: m.text,
+      })),
+    }),
+  });
+  if (!res.ok) return "Sorry, I'm having trouble connecting right now.";
+  const data = await res.json();
+  return data.reply ?? "Sorry, I couldn't process that.";
 }
 
 export default function JarvisPanel({ isOpen, onClose }: JarvisPanelProps) {
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'jarvis', text: "Hi! I'm Jarvis 👋 Ask me about van ETAs, queue positions, or campus directions." }
-  ])
-  const [input, setInput] = useState('')
-  const [isTyping, setIsTyping] = useState(false)
-  const bottomRef = useRef<HTMLDivElement>(null)
+    {
+      role: "jarvis",
+      text: "Hi! I'm Jarvis 👋 Ask me about van ETAs, queue positions, or campus directions.",
+    },
+  ]);
+  const [input, setInput] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const sendMessage = async () => {
-    if (!input.trim()) return
-    const userMsg = input.trim()
-    setInput('')
-    setMessages(prev => [...prev, { role: 'user', text: userMsg }])
-    setIsTyping(true)
-    await new Promise(r => setTimeout(r, 800))
-    setIsTyping(false)
-    setMessages(prev => [...prev, { role: 'jarvis', text: getMockResponse(userMsg) }])
-  }
+    if (!input.trim()) return;
+    const userMsg = input.trim();
+    setInput("");
+
+    const updatedMessages: Message[] = [
+      ...messages,
+      { role: "user", text: userMsg },
+    ];
+    setMessages(updatedMessages);
+    setIsTyping(true);
+
+    try {
+      const session = await fetchAuthSession();
+      const token = session.tokens?.idToken?.toString() ?? "";
+      const reply = await sendToJarvis(userMsg, messages, token);
+      setMessages([...updatedMessages, { role: "jarvis", text: reply }]);
+    } catch {
+      setMessages([
+        ...updatedMessages,
+        { role: "jarvis", text: "Sorry, I'm unavailable right now." },
+      ]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
 
   const handleKey = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') sendMessage()
-  }
+    if (e.key === "Enter") sendMessage();
+  };
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end">
@@ -62,7 +91,9 @@ export default function JarvisPanel({ isOpen, onClose }: JarvisPanelProps) {
         aria-label="Close Jarvis panel"
         className="absolute inset-0 bg-black/60 backdrop-blur-sm w-full cursor-default"
         onClick={onClose}
-        onKeyDown={(e) => { if (e.key === 'Escape') onClose() }}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") onClose();
+        }}
       />
 
       {/* Panel */}
@@ -70,12 +101,17 @@ export default function JarvisPanel({ isOpen, onClose }: JarvisPanelProps) {
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-yellow-400 flex items-center justify-center text-lg">
-              🤖
+            <div className="relative">
+              <div className="w-9 h-9 rounded-full bg-yellow-400 flex items-center justify-center text-lg">
+                🤖
+              </div>
+              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-400 border-2 border-zinc-900" />
             </div>
             <div>
               <p className="text-white font-semibold text-sm">Jarvis</p>
-              <p className="text-zinc-500 text-xs">AI Campus Assistant</p>
+              <p className="text-zinc-500 text-xs">
+                AI Campus Assistant • Powered by Llama 3.1
+              </p>
             </div>
           </div>
           <button
@@ -93,13 +129,18 @@ export default function JarvisPanel({ isOpen, onClose }: JarvisPanelProps) {
           {messages.map((msg, i) => (
             <div
               key={i}
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
+              {msg.role === "jarvis" && (
+                <div className="w-6 h-6 rounded-full bg-yellow-400 flex items-center justify-center text-xs mr-2 mt-1 flex-shrink-0">
+                  🤖
+                </div>
+              )}
               <div
                 className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm ${
-                  msg.role === 'user'
-                    ? 'bg-yellow-400 text-zinc-950 rounded-br-sm'
-                    : 'bg-zinc-800 text-white rounded-bl-sm'
+                  msg.role === "user"
+                    ? "bg-yellow-400 text-zinc-950 rounded-br-sm"
+                    : "bg-zinc-800 text-white rounded-bl-sm"
                 }`}
               >
                 {msg.text}
@@ -109,11 +150,23 @@ export default function JarvisPanel({ isOpen, onClose }: JarvisPanelProps) {
 
           {isTyping && (
             <div className="flex justify-start">
+              <div className="w-6 h-6 rounded-full bg-yellow-400 flex items-center justify-center text-xs mr-2 mt-1 flex-shrink-0">
+                🤖
+              </div>
               <div className="bg-zinc-800 px-4 py-2.5 rounded-2xl rounded-bl-sm">
                 <div className="flex gap-1 items-center h-4">
-                  <span className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <span
+                    className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce"
+                    style={{ animationDelay: "0ms" }}
+                  />
+                  <span
+                    className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce"
+                    style={{ animationDelay: "150ms" }}
+                  />
+                  <span
+                    className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce"
+                    style={{ animationDelay: "300ms" }}
+                  />
                 </div>
               </div>
             </div>
@@ -121,13 +174,35 @@ export default function JarvisPanel({ isOpen, onClose }: JarvisPanelProps) {
           <div ref={bottomRef} />
         </div>
 
+        {/* Quick prompts */}
+        {messages.length === 1 && (
+          <div className="px-4 pb-2 flex gap-2 overflow-x-auto">
+            {[
+              "When is the next van?",
+              "How many ahead of me?",
+              "Which stop has least queue?",
+            ].map((prompt) => (
+              <button
+                key={prompt}
+                type="button"
+                onClick={() => {
+                  setInput(prompt);
+                }}
+                className="flex-shrink-0 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs px-3 py-1.5 rounded-xl transition-colors border border-zinc-700"
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Input */}
         <div className="px-4 py-4 pb-6 border-t border-zinc-800">
           <div className="flex gap-2 items-center bg-zinc-800 rounded-2xl px-4 py-2">
             <input
               type="text"
               value={input}
-              onChange={e => setInput(e.target.value)}
+              onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKey}
               placeholder="Ask Jarvis anything..."
               className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-zinc-600"
@@ -135,7 +210,7 @@ export default function JarvisPanel({ isOpen, onClose }: JarvisPanelProps) {
             <button
               type="button"
               onClick={sendMessage}
-              disabled={!input.trim()}
+              disabled={!input.trim() || isTyping}
               aria-label="Send message"
               className="text-yellow-400 disabled:text-zinc-600 transition-colors text-lg"
             >
@@ -145,5 +220,5 @@ export default function JarvisPanel({ isOpen, onClose }: JarvisPanelProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }
