@@ -15,7 +15,7 @@ const queueSlice = createSlice({
   name: 'queue',
   initialState,
   reducers: {
-    setQueue(state, action: PayloadAction<QueueState>) {
+    setQueue(_state, action: PayloadAction<QueueState>) {
       return { ...action.payload, isInQueue: true }
     },
     clearQueue() {

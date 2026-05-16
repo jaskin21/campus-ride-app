@@ -9,15 +9,20 @@ export interface Stop {
 }
 
 export interface Van {
-  id: string;
-  driverName: string;
-  lat: number;
-  lng: number;
-  capacity: number;
-  currentPassengers: number;
-  isOnline: boolean;
-  nextStop: string;
-  speed: number;
+  id: string
+  driverName: string
+  lat: number
+  lng: number
+  capacity: number
+  currentPassengers: number
+  isOnline: boolean
+  nextStop: string
+  speed: number
+  passengers?: {
+    userId: string
+    destination: string
+    boardedAt: string
+  }[]
 }
 
 export interface QueueEntry {

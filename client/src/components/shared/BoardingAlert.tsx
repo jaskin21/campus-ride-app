@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
 interface BoardingAlertProps {
   readonly isOpen: boolean
@@ -9,35 +9,62 @@ interface BoardingAlertProps {
 
 const COUNTDOWN_SECONDS = 20
 
-export default function BoardingAlert({ isOpen, stopName, onBoard, onSkip }: BoardingAlertProps) {
-  const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS)
+function CountdownRing( { onComplete }: { readonly onComplete: () => void } ) {
+  const [countdown, setCountdown] = useState( COUNTDOWN_SECONDS )
+  const onCompleteRef = useRef( onComplete )
 
-  useEffect(() => {
-    if (!isOpen) {
-      setCountdown(COUNTDOWN_SECONDS)
-      return
-    }
+  useEffect( () => {
+    onCompleteRef.current = onComplete
+  }, [onComplete] )
 
-    const interval = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval)
-          onSkip()
+  useEffect( () => {
+    const interval = setInterval( () => {
+      setCountdown( ( prev ) => {
+        if ( prev <= 1 ) {
+          clearInterval( interval )
+          setTimeout( () => onCompleteRef.current(), 0 )
           return 0
         }
         return prev - 1
-      })
-    }, 1000)
+      } )
+    }, 1000 )
+    return () => clearInterval( interval )
+  }, [] )
 
-    return () => clearInterval(interval)
-  }, [isOpen, onSkip])
-
-  if (!isOpen) return null
-
-  const pct = (countdown / COUNTDOWN_SECONDS) * 100
+  const pct = ( countdown / COUNTDOWN_SECONDS ) * 100
   const radius = 28
   const circumference = 2 * Math.PI * radius
-  const strokeDashoffset = circumference - (pct / 100) * circumference
+  const strokeDashoffset = circumference - ( pct / 100 ) * circumference
+
+  return (
+    <div className="flex justify-center my-5">
+      <div className="relative flex items-center justify-center">
+        <svg width="72" height="72" className="-rotate-90">
+          <circle cx="36" cy="36" r={radius} fill="none" stroke="#3f3f46" strokeWidth="4" />
+          <circle
+            cx="36" cy="36" r={radius}
+            fill="none"
+            stroke={countdown <= 5 ? '#f87171' : '#facc15'}
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.3s' }}
+          />
+        </svg>
+        <div className="absolute text-center">
+          <p className={`text-2xl font-black ${countdown <= 5 ? 'text-red-400' : 'text-white'}`}>
+            {countdown}
+          </p>
+          <p className="text-zinc-500 text-xs -mt-0.5">sec</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function BoardingAlert( { isOpen, stopName, onBoard, onSkip }: BoardingAlertProps ) {
+  if ( !isOpen ) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
@@ -65,35 +92,8 @@ export default function BoardingAlert({ isOpen, stopName, onBoard, onSkip }: Boa
           <p className="text-zinc-500 text-sm mt-1">Are you boarding this van?</p>
         </div>
 
-        {/* Countdown ring */}
-        <div className="flex justify-center my-5">
-          <div className="relative flex items-center justify-center">
-            <svg width="72" height="72" className="-rotate-90">
-              <circle
-                cx="36" cy="36" r={radius}
-                fill="none"
-                stroke="#3f3f46"
-                strokeWidth="4"
-              />
-              <circle
-                cx="36" cy="36" r={radius}
-                fill="none"
-                stroke={countdown <= 5 ? '#f87171' : '#facc15'}
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeDasharray={circumference}
-                strokeDashoffset={strokeDashoffset}
-                style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.3s' }}
-              />
-            </svg>
-            <div className="absolute text-center">
-              <p className={`text-2xl font-black ${countdown <= 5 ? 'text-red-400' : 'text-white'}`}>
-                {countdown}
-              </p>
-              <p className="text-zinc-500 text-xs -mt-0.5">sec</p>
-            </div>
-          </div>
-        </div>
+        {/* Countdown — remounts fresh each time */}
+        <CountdownRing key={stopName} onComplete={onSkip} />
 
         {/* Buttons */}
         <div className="flex gap-3">
@@ -114,7 +114,7 @@ export default function BoardingAlert({ isOpen, stopName, onBoard, onSkip }: Boa
         </div>
 
         <p className="text-zinc-600 text-xs text-center mt-3">
-          No response in {countdown}s — auto skipped
+          Auto skipped in 20s if no response
         </p>
       </div>
     </div>

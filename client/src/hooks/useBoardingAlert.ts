@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { fetchAuthSession } from 'aws-amplify/auth'
 
 interface VanStatus {
@@ -8,12 +8,23 @@ interface VanStatus {
   status?: string
 }
 
-export function useBoardingAlert(userStopId: string | null) {
-  const [showAlert, setShowAlert] = useState(false)
-  const [alertStopName, setAlertStopName] = useState('')
+export function useBoardingAlert( userStopId: string | null, isBoarded: boolean ) {
+  const [showAlert, setShowAlert] = useState( false )
+  const [alertStopName, setAlertStopName] = useState( '' )
+  const hasShownRef = useRef( false )
+  const showAlertRef = useRef( showAlert )
 
-  useEffect(() => {
-    if (!userStopId) return
+  useEffect( () => {
+    showAlertRef.current = showAlert
+  }, [showAlert] )
+
+  // Reset hasShown when stop changes
+  useEffect( () => {
+    hasShownRef.current = false
+  }, [userStopId] )
+
+  useEffect( () => {
+    if ( !userStopId || isBoarded ) return
 
     let active = true
 
@@ -21,23 +32,27 @@ export function useBoardingAlert(userStopId: string | null) {
       try {
         const session = await fetchAuthSession()
         const token = session.tokens?.idToken?.toString() ?? ''
-
         const res = await fetch(
           `${import.meta.env.VITE_API_BASE_URL}/van/position`,
           { headers: { Authorization: `Bearer ${token}` } }
         )
-        if (!res.ok) return
-
+        if ( !res.ok ) return
         const van: VanStatus = await res.json()
 
+        if ( !active ) return
+
         if (
-          active &&
           van.isOnline &&
           van.status === 'boarding' &&
-          van.currentStopId === userStopId
+          van.currentStopId === userStopId &&
+          !hasShownRef.current
         ) {
-          setAlertStopName(van.currentStopName ?? userStopId)
-          setShowAlert(true)
+          hasShownRef.current = true
+          setAlertStopName( van.currentStopName ?? userStopId )
+          setShowAlert( true )
+        } else if ( van.currentStopId !== userStopId ) {
+          hasShownRef.current = false
+          setShowAlert( false )
         }
       } catch {
         // silent fail
@@ -45,14 +60,16 @@ export function useBoardingAlert(userStopId: string | null) {
     }
 
     checkVan()
-    const interval = setInterval(checkVan, 3000)
+    const interval = setInterval( checkVan, 3000 )
     return () => {
       active = false
-      clearInterval(interval)
+      clearInterval( interval )
     }
-  }, [userStopId])
+  }, [userStopId, isBoarded] )
 
-  const dismissAlert = () => setShowAlert(false)
+  const dismissAlert = () => {
+    setShowAlert( false )
+  }
 
   return { showAlert, alertStopName, dismissAlert }
 }
