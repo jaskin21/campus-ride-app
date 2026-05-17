@@ -1,12 +1,13 @@
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { Link, useNavigate } from "react-router-dom";
-import { useAppDispatch } from "../app/hooks";
-import { useAuth } from "../hooks/useAuth";
-import { registerThunk, verifyThunk } from "../features/auth/authThunks";
-import { authService } from "../features/auth/authService";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAppDispatch } from '../app/hooks'
+import { useAuth } from '../hooks/useAuth'
+import { registerThunk, verifyThunk } from '../features/auth/authThunks'
+import { authService } from '../features/auth/authService'
+import { zodResolver } from '@hookform/resolvers/zod'
+import BusLogo from '../assets/product-logo.png'
 
 const registerSchema = z
   .object( {
@@ -28,17 +29,37 @@ const registerSchema = z
     path: ['confirmPassword'],
   } )
 
-type RegisterForm = z.infer<typeof registerSchema>;
+type RegisterForm = z.infer<typeof registerSchema>
+
+const inputStyle = { fontSize: '16px' } as const
+
+const pageStyle = {
+  minHeight: '100dvh',
+  paddingTop: 'max(1.5rem, env(safe-area-inset-top))',
+  paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))',
+  paddingLeft: 'max(1.25rem, env(safe-area-inset-left))',
+  paddingRight: 'max(1.25rem, env(safe-area-inset-right))',
+} as const
+
+const Logo = () => (
+  <div className="mb-8 text-center">
+    <div className="inline-flex items-center justify-center mb-3">
+      <img src={BusLogo} alt="CampusRide logo" className="w-20 h-20 object-contain" />
+    </div>
+    <h1 className="text-2xl font-bold text-white tracking-tight">CampusRide</h1>
+    <p className="text-zinc-500 text-sm mt-1">University of Mindanao</p>
+  </div>
+)
 
 export default function RegisterPage() {
-  const [showPassword, setShowPassword] = useState( false );
-  const [step, setStep] = useState<"form" | "verify">( "form" );
-  const [verifyCode, setVerifyCode] = useState( "" );
-  const [registeredEmail, setRegisteredEmail] = useState( "" );
+  const [showPassword, setShowPassword] = useState( false )
+  const [step, setStep] = useState<'form' | 'verify'>( 'form' )
+  const [verifyCode, setVerifyCode] = useState( '' )
+  const [registeredEmail, setRegisteredEmail] = useState( '' )
 
-  const dispatch = useAppDispatch();
-  const navigate = useNavigate();
-  const { error, isLoading } = useAuth();
+  const dispatch = useAppDispatch()
+  const navigate = useNavigate()
+  const { error, isLoading } = useAuth()
 
   const {
     register,
@@ -46,10 +67,10 @@ export default function RegisterPage() {
     formState: { errors },
   } = useForm<RegisterForm>( {
     resolver: zodResolver( registerSchema ),
-  } );
+  } )
 
   const onSubmit = async ( data: RegisterForm ) => {
-    setRegisteredEmail( data.email );
+    setRegisteredEmail( data.email )
     const result = await dispatch(
       registerThunk( {
         email: data.email,
@@ -57,77 +78,66 @@ export default function RegisterPage() {
         firstName: data.firstName,
         lastName: data.lastName,
       } )
-    );
-
+    )
     if ( registerThunk.fulfilled.match( result ) ) {
-      setStep( "verify" );
+      setStep( 'verify' )
     } else {
-      const message = ( result.payload as string ) ?? "";
-      console.log( "Rejected with:", message );
+      const message = ( result.payload as string ) ?? ''
       if (
-        message.includes( "already" ) ||
-        message.includes( "exists" ) ||
-        message.includes( "Username" )
+        message.includes( 'already' ) ||
+        message.includes( 'exists' ) ||
+        message.includes( 'Username' )
       ) {
-        setStep( "verify" );
+        setStep( 'verify' )
       }
     }
-  };
+  }
 
   const onVerify = async () => {
     try {
-      await dispatch(
-        verifyThunk( { email: registeredEmail, code: verifyCode } )
-      ).unwrap();
-      navigate( "/login" );
+      await dispatch( verifyThunk( { email: registeredEmail, code: verifyCode } ) ).unwrap()
+      navigate( '/login' )
     } catch {
       // error shown via Redux state
     }
-  };
+  }
 
-  if ( step === "verify" ) {
+  // ── VERIFY STEP ──────────────────────────────────────────────────────────
+  if ( step === 'verify' ) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center px-4">
-        <div className="mb-8 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-yellow-400 mb-4">
-            <span className="text-2xl">🚐</span>
-          </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">
-            CampusRide
-          </h1>
-          <p className="text-zinc-500 text-sm mt-1">University of Mindanao</p>
-        </div>
-
+      <div
+        className="flex flex-col items-center justify-center bg-zinc-950 w-full overflow-y-auto"
+        style={pageStyle}
+      >
+        <Logo />
         <div className="w-full max-w-sm bg-zinc-900 rounded-2xl p-6 border border-zinc-800">
           <div className="text-center mb-6">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-yellow-400/10 mb-3">
               <span className="text-xl">📧</span>
             </div>
-            <h2 className="text-lg font-semibold text-white">
-              Check your email
-            </h2>
+            <h2 className="text-lg font-semibold text-white">Check your email</h2>
             <p className="text-zinc-500 text-sm mt-1">
-              We sent a verification code to{" "}
+              We sent a verification code to{' '}
               <span className="text-yellow-400">{registeredEmail}</span>
             </p>
           </div>
 
           <div className="space-y-4">
             <div>
-              <label
-                htmlFor="code"
-                className="text-sm text-zinc-400 mb-1 block"
-              >
+              <label htmlFor="code" className="text-sm text-zinc-400 mb-1 block">
                 Verification code
               </label>
               <input
                 id="code"
                 type="text"
+                inputMode="numeric"
                 value={verifyCode}
                 onChange={( e ) => setVerifyCode( e.target.value )}
                 placeholder="Enter 6-digit code"
                 maxLength={6}
-                className="w-full bg-zinc-800 text-white text-sm rounded-xl px-4 py-3 outline-none border border-zinc-700 focus:border-yellow-400 transition-colors placeholder:text-zinc-600 tracking-widest text-center"
+                autoComplete="one-time-code"
+                style={{ ...inputStyle, letterSpacing: '0.25em' }}
+                className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3 outline-none border border-zinc-700 focus:border-yellow-400 transition-colors placeholder:text-zinc-600 text-center"
               />
             </div>
 
@@ -141,19 +151,21 @@ export default function RegisterPage() {
               type="button"
               onClick={onVerify}
               disabled={isLoading || verifyCode.length < 6}
-              className="w-full bg-yellow-400 hover:bg-yellow-300 disabled:opacity-50 disabled:cursor-not-allowed text-zinc-950 font-semibold text-sm rounded-xl py-3 transition-colors"
+              className="w-full bg-yellow-400 hover:bg-yellow-300 active:bg-yellow-500
+                         disabled:opacity-50 disabled:cursor-not-allowed
+                         text-zinc-950 font-semibold text-sm rounded-xl py-3 transition-colors"
             >
-              {isLoading ? "Verifying..." : "Verify email"}
+              {isLoading ? 'Verifying…' : 'Verify email'}
             </button>
 
             <button
               type="button"
               onClick={async () => {
                 try {
-                  await authService.resendCode( registeredEmail );
-                  alert( "New code sent — check your email" );
+                  await authService.resendCode( registeredEmail )
+                  alert( 'New code sent — check your email' )
                 } catch ( err ) {
-                  console.error( err );
+                  console.error( err )
                 }
               }}
               className="w-full text-yellow-400 hover:text-yellow-300 text-sm transition-colors py-2"
@@ -163,7 +175,7 @@ export default function RegisterPage() {
 
             <button
               type="button"
-              onClick={() => setStep( "form" )}
+              onClick={() => setStep( 'form' )}
               className="w-full text-zinc-500 hover:text-zinc-300 text-sm transition-colors py-2"
             >
               ← Back to registration
@@ -171,20 +183,16 @@ export default function RegisterPage() {
           </div>
         </div>
       </div>
-    );
+    )
   }
 
+  // ── REGISTER FORM STEP ───────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center px-4 py-8">
-      <div className="mb-8 text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-yellow-400 mb-4">
-          <span className="text-2xl">🚐</span>
-        </div>
-        <h1 className="text-2xl font-bold text-white tracking-tight">
-          CampusRide
-        </h1>
-        <p className="text-zinc-500 text-sm mt-1">University of Mindanao</p>
-      </div>
+    <div
+      className="flex flex-col items-center justify-center bg-zinc-950 w-full overflow-y-auto"
+      style={pageStyle}
+    >
+      <Logo />
 
       <div className="w-full max-w-sm bg-zinc-900 rounded-2xl p-6 border border-zinc-800">
         <div className="mb-6">
@@ -195,54 +203,47 @@ export default function RegisterPage() {
         </div>
 
         <form onSubmit={handleSubmit( onSubmit )} className="space-y-4">
+          {/* First / Last name */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label
-                htmlFor="firstName"
-                className="text-sm text-zinc-400 mb-1 block"
-              >
+              <label htmlFor="firstName" className="text-sm text-zinc-400 mb-1 block">
                 First name
               </label>
               <input
                 id="firstName"
-                {...register( "firstName" )}
+                {...register( 'firstName' )}
                 type="text"
                 placeholder="Juan"
-                className="w-full bg-zinc-800 text-white text-sm rounded-xl px-4 py-3 outline-none border border-zinc-700 focus:border-yellow-400 transition-colors placeholder:text-zinc-600"
+                autoComplete="given-name"
+                style={inputStyle}
+                className="w-full bg-zinc-800 text-white rounded-xl px-3 py-3 outline-none border border-zinc-700 focus:border-yellow-400 transition-colors placeholder:text-zinc-600"
               />
               {errors.firstName && (
-                <p className="text-red-400 text-xs mt-1">
-                  {errors.firstName.message}
-                </p>
+                <p className="text-red-400 text-xs mt-1">{errors.firstName.message}</p>
               )}
             </div>
             <div>
-              <label
-                htmlFor="lastName"
-                className="text-sm text-zinc-400 mb-1 block"
-              >
+              <label htmlFor="lastName" className="text-sm text-zinc-400 mb-1 block">
                 Last name
               </label>
               <input
                 id="lastName"
-                {...register( "lastName" )}
+                {...register( 'lastName' )}
                 type="text"
                 placeholder="Dela Cruz"
-                className="w-full bg-zinc-800 text-white text-sm rounded-xl px-4 py-3 outline-none border border-zinc-700 focus:border-yellow-400 transition-colors placeholder:text-zinc-600"
+                autoComplete="family-name"
+                style={inputStyle}
+                className="w-full bg-zinc-800 text-white rounded-xl px-3 py-3 outline-none border border-zinc-700 focus:border-yellow-400 transition-colors placeholder:text-zinc-600"
               />
               {errors.lastName && (
-                <p className="text-red-400 text-xs mt-1">
-                  {errors.lastName.message}
-                </p>
+                <p className="text-red-400 text-xs mt-1">{errors.lastName.message}</p>
               )}
             </div>
           </div>
 
+          {/* Email */}
           <div>
-            <label
-              htmlFor="email"
-              className="text-sm text-zinc-400 mb-1 block"
-            >
+            <label htmlFor="email" className="text-sm text-zinc-400 mb-1 block">
               Email
             </label>
             <input
@@ -250,66 +251,62 @@ export default function RegisterPage() {
               {...register( 'email' )}
               type="email"
               placeholder="yourname@umindanao.edu.ph"
-              className="w-full bg-zinc-800 text-white text-sm rounded-xl px-4 py-3 outline-none border border-zinc-700 focus:border-yellow-400 transition-colors placeholder:text-zinc-600"
+              autoComplete="email"
+              style={inputStyle}
+              className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3 outline-none border border-zinc-700 focus:border-yellow-400 transition-colors placeholder:text-zinc-600"
             />
             {!errors.email && (
-              <p className="text-zinc-600 text-xs mt-1">
-                Must be a @umindanao.edu.ph email
-              </p>
+              <p className="text-zinc-600 text-xs mt-1">Must be a @umindanao.edu.ph email</p>
             )}
             {errors.email && (
               <p className="text-red-400 text-xs mt-1">{errors.email.message}</p>
             )}
           </div>
 
+          {/* Password */}
           <div>
-            <label
-              htmlFor="password"
-              className="text-sm text-zinc-400 mb-1 block"
-            >
+            <label htmlFor="password" className="text-sm text-zinc-400 mb-1 block">
               Password
             </label>
             <div className="relative">
               <input
                 id="password"
-                {...register( "password" )}
-                type={showPassword ? "text" : "password"}
+                {...register( 'password' )}
+                type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
-                className="w-full bg-zinc-800 text-white text-sm rounded-xl px-4 py-3 outline-none border border-zinc-700 focus:border-yellow-400 transition-colors placeholder:text-zinc-600 pr-12"
+                autoComplete="new-password"
+                style={inputStyle}
+                className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3 outline-none border border-zinc-700 focus:border-yellow-400 transition-colors placeholder:text-zinc-600 pr-12"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword( !showPassword )}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors text-xs"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors text-xs px-1 py-1"
               >
-                {showPassword ? "Hide" : "Show"}
+                {showPassword ? 'Hide' : 'Show'}
               </button>
             </div>
             {errors.password && (
-              <p className="text-red-400 text-xs mt-1">
-                {errors.password.message}
-              </p>
+              <p className="text-red-400 text-xs mt-1">{errors.password.message}</p>
             )}
           </div>
 
+          {/* Confirm password */}
           <div>
-            <label
-              htmlFor="confirmPassword"
-              className="text-sm text-zinc-400 mb-1 block"
-            >
+            <label htmlFor="confirmPassword" className="text-sm text-zinc-400 mb-1 block">
               Confirm password
             </label>
             <input
               id="confirmPassword"
-              {...register( "confirmPassword" )}
-              type={showPassword ? "text" : "password"}
+              {...register( 'confirmPassword' )}
+              type={showPassword ? 'text' : 'password'}
               placeholder="••••••••"
-              className="w-full bg-zinc-800 text-white text-sm rounded-xl px-4 py-3 outline-none border border-zinc-700 focus:border-yellow-400 transition-colors placeholder:text-zinc-600"
+              autoComplete="new-password"
+              style={inputStyle}
+              className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3 outline-none border border-zinc-700 focus:border-yellow-400 transition-colors placeholder:text-zinc-600"
             />
             {errors.confirmPassword && (
-              <p className="text-red-400 text-xs mt-1">
-                {errors.confirmPassword.message}
-              </p>
+              <p className="text-red-400 text-xs mt-1">{errors.confirmPassword.message}</p>
             )}
           </div>
 
@@ -322,18 +319,18 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-yellow-400 hover:bg-yellow-300 disabled:opacity-50 disabled:cursor-not-allowed text-zinc-950 font-semibold text-sm rounded-xl py-3 transition-colors mt-2"
+            className="w-full bg-yellow-400 hover:bg-yellow-300 active:bg-yellow-500
+                       disabled:opacity-50 disabled:cursor-not-allowed
+                       text-zinc-950 font-semibold text-sm rounded-xl py-3
+                       transition-colors mt-2"
           >
-            {isLoading ? "Creating account..." : "Create account"}
+            {isLoading ? 'Creating account…' : 'Create account'}
           </button>
         </form>
 
         <p className="text-center text-zinc-500 text-sm mt-6">
-          Already have an account?{" "}
-          <Link
-            to="/login"
-            className="text-yellow-400 hover:text-yellow-300 transition-colors"
-          >
+          Already have an account?{' '}
+          <Link to="/login" className="text-yellow-400 hover:text-yellow-300 transition-colors">
             Sign in
           </Link>
         </p>
@@ -343,5 +340,5 @@ export default function RegisterPage() {
         Account access requires admin approval after registration
       </p>
     </div>
-  );
+  )
 }

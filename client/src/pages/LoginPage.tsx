@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { useAppDispatch } from '../app/hooks'
 import { useAuth } from '../hooks/useAuth'
 import { loginThunk } from '../features/auth/authThunks'
+import BusLogo from '../assets/product-logo.png'
 
 const loginSchema = z.object( {
   email: z.string().min( 1, 'Email is required' ).pipe( z.email( 'Invalid email address' ) ),
@@ -14,14 +15,8 @@ const loginSchema = z.object( {
 
 type LoginForm = z.infer<typeof loginSchema>
 
-/*
- * iOS Safari zooms into any <input> whose font-size is below 16px.
- * Tailwind's text-sm = 14px — below the threshold.
- * Fix: always set font-size: 16px on inputs via inline style.
- * Also set maximum-scale=1 in index.html viewport meta to block
- * the zoom triggered on page navigation after login.
- */
 const inputStyle = { fontSize: '16px' } as const
+
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState( false )
@@ -61,8 +56,8 @@ export default function LoginPage() {
     >
       {/* Logo */}
       <div className="mb-8 text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-yellow-400 mb-4">
-          <span className="text-2xl">🚐</span>
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-transparent mb-4">
+          <img src={BusLogo} alt="CampusRide logo" className="w-20 h-20 object-contain" />
         </div>
         <h1 className="text-2xl font-bold text-white tracking-tight">CampusRide</h1>
         <p className="text-zinc-500 text-sm mt-1">University of Mindanao</p>
@@ -142,10 +137,7 @@ export default function LoginPage() {
 
         <p className="text-center text-zinc-500 text-sm mt-6">
           New student?{' '}
-          <Link
-            to="/register"
-            className="text-yellow-400 hover:text-yellow-300 transition-colors"
-          >
+          <Link to="/register" className="text-yellow-400 hover:text-yellow-300 transition-colors">
             Create account
           </Link>
         </p>
