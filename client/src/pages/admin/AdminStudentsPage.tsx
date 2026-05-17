@@ -1,57 +1,89 @@
-import { useState, useEffect } from "react";
-import { fetchAuthSession } from "aws-amplify/auth";
-import BottomNav from "../../components/shared/BottomNav";
+import { useState, useEffect } from 'react'
+import { fetchAuthSession } from 'aws-amplify/auth'
+import BottomNav from '../../components/shared/BottomNav'
+import CreateDriverModal from '../../components/admin/CreateDriverModal'
 
 interface Student {
-  username: string;
-  email: string;
-  status: string;
-  createdAt: string;
+  username: string
+  email: string
+  status: string
+  createdAt: string
 }
 
 export default function AdminStudentsPage() {
-  const [students, setStudents] = useState<Student[]>( [] );
-  const [isLoading, setIsLoading] = useState( true );
+  const [students, setStudents] = useState<Student[]>( [] )
+  const [isLoading, setIsLoading] = useState( true )
+  const [createDriverOpen, setCreateDriverOpen] = useState( false )
 
   useEffect( () => {
-    const fetchStudents = async () => {
+    let active = true
+
+    const load = async () => {
       try {
-        const session = await fetchAuthSession();
-        const token = session.tokens?.idToken?.toString() ?? "";
+        const session = await fetchAuthSession()
+        const token = session.tokens?.idToken?.toString() ?? ''
         const res = await fetch(
           `${import.meta.env.VITE_API_BASE_URL}/admin/students`,
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
-        if ( !res.ok ) return;
-        const data = await res.json();
-        setStudents( data.students ?? [] );
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+        if ( !res.ok ) return
+        const data = await res.json()
+        if ( active ) setStudents( data.students ?? [] )
       } catch {
         // silent fail
       } finally {
-        setIsLoading( false );
+        if ( active ) setIsLoading( false )
       }
-    };
-    fetchStudents();
-  }, [] );
+    }
+
+    load()
+    return () => { active = false }
+  }, [] )
+
+  const refetchStudents = async () => {
+    try {
+      const session = await fetchAuthSession()
+      const token = session.tokens?.idToken?.toString() ?? ''
+      const res = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/admin/students`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      if ( !res.ok ) return
+      const data = await res.json()
+      setStudents( data.students ?? [] )
+    } catch {
+      // silent fail
+    }
+  }
 
   return (
     <div
       className="bg-zinc-950 w-full overflow-y-auto"
-      style={{ minHeight: "100dvh" }}
+      style={{ minHeight: '100dvh' }}
     >
-      {/* Scrollable content */}
       <div
         style={{
-          paddingTop: "max(2.5rem, env(safe-area-inset-top))",
-          paddingBottom: "calc(5rem + env(safe-area-inset-bottom))",
-          paddingLeft: "max(1rem, env(safe-area-inset-left))",
-          paddingRight: "max(1rem, env(safe-area-inset-right))",
+          paddingTop: 'max(2.5rem, env(safe-area-inset-top))',
+          paddingBottom: 'calc(5rem + env(safe-area-inset-bottom))',
+          paddingLeft: 'max(1rem, env(safe-area-inset-left))',
+          paddingRight: 'max(1rem, env(safe-area-inset-right))',
         }}
       >
         {/* Header */}
-        <div className="pb-4">
-          <p className="text-white font-semibold text-lg">Students</p>
-          <p className="text-zinc-500 text-sm">Registered users</p>
+        <div className="pb-4 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-white font-semibold text-lg">Students & Drivers</p>
+            <p className="text-zinc-500 text-sm">{students.length} registered users</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setCreateDriverOpen( true )}
+            className="bg-yellow-400 hover:bg-yellow-300 active:bg-yellow-500
+                       text-zinc-950 text-xs font-bold px-4 py-2.5 rounded-xl
+                       transition-colors flex-shrink-0"
+          >
+            + Add Driver
+          </button>
         </div>
 
         {/* Loading */}
@@ -90,12 +122,12 @@ export default function AdminStudentsPage() {
                   </div>
                 </div>
                 <span
-                  className={`text-xs font-semibold px-2 py-1 rounded-lg flex-shrink-0 ${student.status === "CONFIRMED"
-                      ? "bg-green-500/20 text-green-400"
-                      : "bg-yellow-500/20 text-yellow-400"
+                  className={`text-xs font-semibold px-2 py-1 rounded-lg flex-shrink-0 ${student.status === 'CONFIRMED'
+                      ? 'bg-green-500/20 text-green-400'
+                      : 'bg-yellow-500/20 text-yellow-400'
                     }`}
                 >
-                  {student.status === "CONFIRMED" ? "Active" : "Pending"}
+                  {student.status === 'CONFIRMED' ? 'Active' : 'Pending'}
                 </span>
               </div>
             </div>
@@ -103,13 +135,18 @@ export default function AdminStudentsPage() {
         </div>
       </div>
 
-      {/* BottomNav fixed to bottom — not in document flow */}
+      <CreateDriverModal
+        isOpen={createDriverOpen}
+        onClose={() => setCreateDriverOpen( false )}
+        onSuccess={refetchStudents}
+      />
+
       <div
-        className="fixed bottom-0 left-0 right-0 z-50"
-        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        className="fixed bottom-0 left-0 right-0 z-49"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <BottomNav />
       </div>
     </div>
-  );
+  )
 }

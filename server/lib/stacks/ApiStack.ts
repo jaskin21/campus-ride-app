@@ -170,6 +170,16 @@ export class ApiStack extends cdk.Stack {
       },
     } );
 
+    const createDriverFn = new NodejsFunction( this, 'CreateDriverFn', {
+      ...lambdaDefaults,
+      entry: path.join( __dirname, '../lambdas/admin/createDriver.ts' ),
+      handler: 'handler',
+      environment: {
+        ...lambdaEnv,
+        USER_POOL_ID: props.userPool.userPoolId,
+      },
+    } )
+
     // ─── Stop Lambdas ─────────────────────────────────
     const getStopsFn = new NodejsFunction( this, "GetStopsFn", {
       ...lambdaDefaults,
@@ -226,6 +236,11 @@ export class ApiStack extends cdk.Stack {
     );
 
     props.userPool.grant( getStudentsFn, "cognito-idp:ListUsersInGroup" );
+    props.userPool.grant( createDriverFn,
+      'cognito-idp:AdminCreateUser',
+      'cognito-idp:AdminSetUserPassword',
+      'cognito-idp:AdminAddUserToGroup'
+    )
 
     const adminResource = api.root.addResource( "admin" );
     adminResource
@@ -287,6 +302,12 @@ export class ApiStack extends cdk.Stack {
     queueResource.addResource( 'offboard' ).addMethod(
       'POST',
       new apigw.LambdaIntegration( offboardPassengerFn ),
+      { authorizer, authorizationType: apigw.AuthorizationType.COGNITO }
+    )
+
+    adminResource.addResource( 'drivers' ).addMethod(
+      'POST',
+      new apigw.LambdaIntegration( createDriverFn ),
       { authorizer, authorizationType: apigw.AuthorizationType.COGNITO }
     )
 

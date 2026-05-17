@@ -3,7 +3,6 @@ import { fetchAuthSession } from 'aws-amplify/auth'
 import { MOCK_STOPS } from '../../lib/mockData'
 import VanMap from '../../components/map/VanMap'
 import QueueCard from '../../components/shared/QueueCard'
-import JarvisButton from '../../components/shared/JarvisButton'
 import JarvisPanel from '../../components/shared/JarvisPanel'
 import BottomNav from '../../components/shared/BottomNav'
 import JoinQueueModal from '../../components/shared/JoinQueueModal'
@@ -34,7 +33,6 @@ export default function StudentHomePage() {
   const [leaveQueue] = useLeaveQueueMutation()
   const [confirmBoarding] = useConfirmBoardingMutation()
   const [skipBoarding] = useSkipBoardingMutation()
-
   const [updateDestination] = useUpdateDestinationMutation()
   const [offboardPassenger] = useOffboardPassengerMutation()
 
@@ -66,9 +64,7 @@ export default function StudentHomePage() {
 
   useEffect( () => {
     if ( !queueState.isInQueue || queueState.isBoarded ) return
-
     let active = true
-
     const pollPosition = async () => {
       try {
         const session = await fetchAuthSession()
@@ -86,7 +82,6 @@ export default function StudentHomePage() {
         // silent fail
       }
     }
-
     pollPosition()
     const interval = setInterval( pollPosition, 5000 )
     return () => {
@@ -95,14 +90,12 @@ export default function StudentHomePage() {
     }
   }, [queueState.isInQueue, queueState.isBoarded, queueState.position, dispatch] )
 
-  // Restore queue on page load
   useEffect( () => {
     const restoreQueue = async () => {
       try {
         const token = await fetchAuthSession()
         const idToken = token.tokens?.idToken?.toString()
         if ( !idToken ) return
-
         const res = await fetch(
           `${import.meta.env.VITE_API_BASE_URL}/queue/user/active`,
           { headers: { Authorization: `Bearer ${idToken}` } }
@@ -187,7 +180,6 @@ export default function StudentHomePage() {
     setChangeDestOpen( true )
   }
 
-  // Build queue entry for QueueCard
   const queueEntry: QueueEntry | null = queueState.isInQueue || queueState.isBoarded
     ? {
       position: queueState.position ?? 1,
@@ -207,7 +199,10 @@ export default function StudentHomePage() {
     : null
 
   return (
-    <div className="relative w-full h-screen bg-zinc-950 overflow-hidden">
+    <div
+      className="relative w-full bg-zinc-950 overflow-hidden"
+      style={{ height: '100dvh' }}
+    >
       {/* Full screen map */}
       <div className="absolute inset-0">
         <VanMap
@@ -217,67 +212,85 @@ export default function StudentHomePage() {
         />
       </div>
 
-      {/* Top bar */}
-      <div className="absolute top-0 left-0 right-0 z-10 px-4 pt-4 flex items-center justify-between">
-        <div className="bg-zinc-900/90 backdrop-blur-sm border border-zinc-800 rounded-2xl px-4 py-2">
+      {/* Top bar — branding + van status */}
+      <div
+        className="absolute top-0 left-0 right-0 z-10 px-4 flex items-center justify-between gap-2"
+        style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
+      >
+        {/* Branding pill */}
+        <div className="bg-zinc-900/90 backdrop-blur-sm border border-zinc-800 rounded-2xl px-4 py-2 flex-shrink-0">
           <p className="text-white text-sm font-semibold">CampusRide</p>
           <p className="text-zinc-500 text-xs">University of Mindanao</p>
         </div>
 
         {/* Van status pill */}
-        <div className="bg-zinc-900/90 backdrop-blur-sm border border-zinc-800 rounded-2xl px-3 py-2 flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${liveVan.isOnline ? 'bg-green-400 animate-pulse' : 'bg-zinc-600'}`} />
+        <div className="bg-zinc-900/90 backdrop-blur-sm border border-zinc-800 rounded-2xl px-3 py-2 flex items-center gap-2 flex-shrink-0">
+          <span
+            className={`w-2 h-2 rounded-full flex-shrink-0 ${liveVan.isOnline ? 'bg-green-400 animate-pulse' : 'bg-zinc-600'
+              }`}
+          />
           <span className="text-white text-xs font-medium">
             {liveVan.isOnline ? 'Van Online' : 'Van Offline'}
           </span>
         </div>
       </div>
 
-      {/* Bottom overlay */}
-      <div className="absolute bottom-24 left-0 right-0 z-10 flex flex-col gap-3">
-        {/* Queue card */}
-        <QueueCard
-          queue={queueEntry}
-          onLeave={handleLeave}
-          onJoin={() => setJoinModalOpen( true )}
-        />
+      {/* Bottom overlay — Jarvis pill + QueueCard stacked */}
+      <div
+        className="absolute left-0 right-0 z-10 flex flex-col items-center gap-3 px-4"
+        style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom))' }}
+      >
+        {/* Jarvis floating pill — centered above QueueCard */}
+        <button
+          type="button"
+          onClick={() => setJarvisOpen( true )}
+          className="flex items-center gap-2 bg-zinc-900/95 backdrop-blur-sm border border-zinc-700
+                     hover:border-yellow-400/50 active:scale-95
+                     rounded-full px-5 py-2.5 shadow-lg transition-all duration-200"
+        >
+          <span className="text-base">🤖</span>
+          <span className="text-white text-sm font-semibold">Ask Jarvis</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
+        </button>
 
-        {/* Jarvis button */}
-        <div className="flex justify-end px-4">
-          <JarvisButton onOpen={() => setJarvisOpen( true )} />
+        {/* Queue card — full width */}
+        <div className="w-full">
+          <QueueCard
+            queue={queueEntry}
+            onLeave={handleLeave}
+            onJoin={() => setJoinModalOpen( true )}
+          />
         </div>
       </div>
 
-      {/* Bottom nav */}
-      <BottomNav />
+      {/* BottomNav fixed to bottom */}
+      <div
+        className="fixed bottom-0 left-0 right-0 z-50"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <BottomNav />
+      </div>
 
-      {/* Jarvis panel */}
+      {/* Overlays & modals */}
       <JarvisPanel isOpen={jarvisOpen} onClose={() => setJarvisOpen( false )} />
-
-      {/* Join queue modal */}
       <JoinQueueModal
         isOpen={joinModalOpen}
         onClose={() => setJoinModalOpen( false )}
         onJoin={handleJoin}
         isLoading={isJoining}
       />
-
-      {/* Boarding alert */}
       <BoardingAlert
         isOpen={showAlert}
         stopName={alertStopName}
         onBoard={handleBoard}
         onSkip={handleSkip}
       />
-
-      {/* Offboard alert */}
       <OffboardAlert
         isOpen={showOffboardAlert}
         stopName={offboardStopName}
         onAlighted={handleAlighted}
         onStayOn={handleStayOn}
       />
-
       <ChangeDestinationModal
         key={changeDestOpen ? 'open' : 'closed'}
         isOpen={changeDestOpen}

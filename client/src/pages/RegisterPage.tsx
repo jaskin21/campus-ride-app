@@ -259,7 +259,7 @@ export default function RegisterPage() {
             )}
             {errors.email && (
               <p className="text-red-400 text-xs mt-1">{errors.email.message}</p>
-            )}S
+            )}
           </div>
 
           <div>

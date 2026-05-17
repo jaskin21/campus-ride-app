@@ -66,14 +66,28 @@ export default function DriverPanelPage() {
   const passengers: Passenger[] = vanAny.passengers ?? []
 
   return (
-    <div className="relative w-full h-screen bg-zinc-950 overflow-hidden">
+    /*
+     * FIXES:
+     * 1. h-screen → height: 100dvh            dynamic viewport for iOS Safari
+     * 2. Top bar uses safe-area-inset-top      clears notch / status bar
+     * 3. Bottom panels use calc() with         safe-area-inset-bottom so panels
+     *    BottomNav height (4rem) + inset        never overlap the nav on any iPhone
+     * 4. BottomNav fixed to bottom             not inline in document flow
+     */
+    <div
+      className="relative w-full bg-zinc-950 overflow-hidden"
+      style={{ height: '100dvh' }}
+    >
       {/* Full screen map */}
       <div className="absolute inset-0 z-0">
         <VanMap stops={liveStops} van={liveVan} />
       </div>
 
-      {/* Top bar */}
-      <div className="absolute top-0 left-0 right-0 z-10 px-4 pt-4">
+      {/* Top bar — clears notch */}
+      <div
+        className="absolute top-0 left-0 right-0 z-10 px-4"
+        style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
+      >
         <div className="bg-zinc-900/90 backdrop-blur-sm border border-zinc-800 rounded-2xl px-4 py-3 space-y-3">
           {/* Header */}
           <div className="flex items-center justify-between">
@@ -90,7 +104,10 @@ export default function DriverPanelPage() {
                   : 'bg-zinc-800 border border-zinc-700 text-zinc-400'
                 }`}
             >
-              <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-400 animate-pulse' : 'bg-zinc-600'}`} />
+              <span
+                className={`w-2 h-2 rounded-full flex-shrink-0 ${isOnline ? 'bg-green-400 animate-pulse' : 'bg-zinc-600'
+                  }`}
+              />
               {getToggleLabel( isToggling, isOnline )}
             </button>
           </div>
@@ -100,9 +117,14 @@ export default function DriverPanelPage() {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-zinc-500 text-xs">Passengers</span>
-                <span className={`text-xs font-bold ${occupancyPct >= 90 ? 'text-red-400' :
-                    occupancyPct >= 70 ? 'text-yellow-400' : 'text-green-400'
-                  }`}>
+                <span
+                  className={`text-xs font-bold ${occupancyPct >= 90
+                      ? 'text-red-400'
+                      : occupancyPct >= 70
+                        ? 'text-yellow-400'
+                        : 'text-green-400'
+                    }`}
+                >
                   {liveVan.currentPassengers}/{liveVan.capacity}
                   {occupancyPct >= 90 ? ' — Full' : ''}
                 </span>
@@ -129,9 +151,11 @@ export default function DriverPanelPage() {
         </div>
       </div>
 
-      {/* Bottom panels */}
-      <div className="absolute bottom-16 left-0 right-0 z-10 px-4 space-y-2">
-
+      {/* Bottom panels — always above BottomNav + home indicator */}
+      <div
+        className="absolute left-0 right-0 z-10 px-4 space-y-2"
+        style={{ bottom: 'calc(5.5rem + env(safe-area-inset-bottom))' }}
+      >
         {/* Passengers on board */}
         <div className="bg-zinc-900/90 backdrop-blur-sm border border-zinc-800 rounded-2xl overflow-hidden">
           <button
@@ -140,7 +164,10 @@ export default function DriverPanelPage() {
             className="w-full flex items-center justify-between px-4 py-3 active:bg-zinc-800/60 transition-colors"
           >
             <div className="flex items-center gap-2">
-              <span className={`w-2 h-2 rounded-full ${passengers.length > 0 ? 'bg-green-400 animate-pulse' : 'bg-zinc-600'}`} />
+              <span
+                className={`w-2 h-2 rounded-full flex-shrink-0 ${passengers.length > 0 ? 'bg-green-400 animate-pulse' : 'bg-zinc-600'
+                  }`}
+              />
               <p className="text-zinc-300 text-xs font-semibold uppercase tracking-wider">
                 On Board — {passengers.length}/{liveVan.capacity}
               </p>
@@ -150,10 +177,15 @@ export default function DriverPanelPage() {
             </span>
           </button>
 
-          <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isPassengersOpen ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'}`}>
-            <div className="px-4 pb-4 space-y-2">
+          <div
+            className={`transition-all duration-300 ease-in-out overflow-hidden ${isPassengersOpen ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'
+              }`}
+          >
+            <div className="px-4 pb-4 space-y-2 overflow-y-auto max-h-44">
               {passengers.length === 0 && (
-                <p className="text-zinc-600 text-xs text-center py-2">No passengers on board</p>
+                <p className="text-zinc-600 text-xs text-center py-2">
+                  No passengers on board
+                </p>
               )}
               {passengers.map( ( p, idx ) => {
                 const destStop = liveStops.find( s => s.id === p.destination )
@@ -163,7 +195,7 @@ export default function DriverPanelPage() {
                     className="flex items-center justify-between bg-zinc-800 rounded-xl px-3 py-2"
                   >
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-lg bg-zinc-700 flex items-center justify-center">
+                      <div className="w-6 h-6 rounded-lg bg-zinc-700 flex items-center justify-center flex-shrink-0">
                         <span className="text-zinc-400 text-xs font-bold">#{idx + 1}</span>
                       </div>
                       <span className="text-zinc-400 text-xs">Passenger {idx + 1}</span>
@@ -187,7 +219,7 @@ export default function DriverPanelPage() {
             <div className="px-4 py-3 border-b border-zinc-800 bg-yellow-400/5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
+                  <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse flex-shrink-0" />
                   <p className="text-yellow-400 text-xs font-semibold uppercase tracking-wider">
                     Boarding at {currentStopQueue.name}
                   </p>
@@ -205,7 +237,7 @@ export default function DriverPanelPage() {
             className="w-full flex items-center justify-between px-4 py-3 active:bg-zinc-800/60 transition-colors"
           >
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse flex-shrink-0" />
               <p className="text-zinc-300 text-xs font-semibold uppercase tracking-wider">
                 Queue Per Stop
               </p>
@@ -215,27 +247,33 @@ export default function DriverPanelPage() {
             </span>
           </button>
 
-          <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isBoardingOpen ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'}`}>
-            <div className="px-4 pb-4 space-y-2 overflow-y-auto max-h-56">
+          <div
+            className={`transition-all duration-300 ease-in-out overflow-hidden ${isBoardingOpen ? 'max-h-56 opacity-100' : 'max-h-0 opacity-0'
+              }`}
+          >
+            <div className="px-4 pb-4 space-y-2 overflow-y-auto max-h-52">
               {liveStops.filter( s => s.active ).map( stop => (
-                <div key={stop.id} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${stop.queueCount > 0 ? 'bg-yellow-400' : 'bg-zinc-600'}`} />
-                    <span className="text-white text-sm">{stop.name}</span>
+                <div key={stop.id} className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div
+                      className={`w-2 h-2 rounded-full flex-shrink-0 ${stop.queueCount > 0 ? 'bg-yellow-400' : 'bg-zinc-600'
+                        }`}
+                    />
+                    <span className="text-white text-sm truncate">{stop.name}</span>
                     {stop.id === vanAny.currentStopId && (
-                      <span className="text-yellow-400 text-xs bg-yellow-400/10 px-1.5 py-0.5 rounded-lg">
+                      <span className="text-yellow-400 text-xs bg-yellow-400/10 px-1.5 py-0.5 rounded-lg flex-shrink-0">
                         Here
                       </span>
                     )}
                   </div>
                   {stop.queueCount > 0 ? (
-                    <div className="bg-yellow-400/10 border border-yellow-400/30 rounded-lg px-2 py-0.5">
+                    <div className="bg-yellow-400/10 border border-yellow-400/30 rounded-lg px-2 py-0.5 flex-shrink-0">
                       <span className="text-yellow-400 text-xs font-bold">
                         {stop.queueCount} waiting
                       </span>
                     </div>
                   ) : (
-                    <span className="text-zinc-600 text-xs">Empty</span>
+                    <span className="text-zinc-600 text-xs flex-shrink-0">Empty</span>
                   )}
                 </div>
               ) )}
@@ -244,7 +282,13 @@ export default function DriverPanelPage() {
         </div>
       </div>
 
-      <BottomNav />
+      {/* BottomNav fixed to bottom — not in document flow */}
+      <div
+        className="fixed bottom-0 left-0 right-0 z-50"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <BottomNav />
+      </div>
     </div>
   )
 }
