@@ -10,129 +10,157 @@ export default function AdminStopsPage() {
   const { data, refetch } = useGetStopsQuery();
   const [updateStop] = useUpdateStopMutation();
   const liveStops = useStopQueues();
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState("");
+  const [editingId, setEditingId] = useState<string | null>( null );
+  const [editName, setEditName] = useState( "" );
 
   const stops = data?.stops ?? [];
 
-  const handleToggle = async (stopId: string, active: boolean) => {
-    await updateStop({ stopId, active });
+  const handleToggle = async ( stopId: string, active: boolean ) => {
+    await updateStop( { stopId, active } );
     refetch();
   };
 
-  const handleRename = async (stopId: string) => {
-    if (!editName.trim()) return;
-    await updateStop({ stopId, name: editName });
-    setEditingId(null);
-    setEditName("");
+  const handleRename = async ( stopId: string ) => {
+    if ( !editName.trim() ) return;
+    await updateStop( { stopId, name: editName } );
+    setEditingId( null );
+    setEditName( "" );
     refetch();
   };
 
-  const getLiveCount = (stopId: string) => {
-    return liveStops.find((s) => s.id === stopId)?.queueCount ?? 0;
+  const getLiveCount = ( stopId: string ) => {
+    return liveStops.find( ( s ) => s.id === stopId )?.queueCount ?? 0;
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 pb-20">
-      {/* Header */}
-      <div className="px-4 pt-10 pb-4">
-        <p className="text-white font-semibold text-lg">Stops</p>
-        <p className="text-zinc-500 text-sm">
-          {stops.filter((s) => s.active).length} active ·{" "}
-          {stops.filter((s) => !s.active).length} inactive
-        </p>
-      </div>
+    /*
+     * FIXES:
+     * 1. min-h-screen → min-h-[100dvh]      dynamic viewport for iOS Safari
+     * 2. pt uses safe-area-inset-top         clears notch / status bar
+     * 3. pb uses safe-area-inset-bottom      clears home indicator + nav height
+     * 4. BottomNav fixed to bottom           not inline in document flow
+     */
+    <div
+      className="bg-zinc-950 w-full overflow-y-auto"
+      style={{ minHeight: "100dvh" }}
+    >
+      {/* Scrollable content — padded away from notch at top and nav at bottom */}
+      <div
+        style={{
+          paddingTop: "max(2.5rem, env(safe-area-inset-top))",
+          // 5rem = BottomNav height (~64px) + extra breathing room
+          paddingBottom: "calc(5rem + env(safe-area-inset-bottom))",
+          paddingLeft: "max(1rem, env(safe-area-inset-left))",
+          paddingRight: "max(1rem, env(safe-area-inset-right))",
+        }}
+      >
+        {/* Header */}
+        <div className="pb-4">
+          <p className="text-white font-semibold text-lg">Stops</p>
+          <p className="text-zinc-500 text-sm">
+            {stops.filter( ( s ) => s.active ).length} active ·{" "}
+            {stops.filter( ( s ) => !s.active ).length} inactive
+          </p>
+        </div>
 
-      <div className="mx-4 space-y-2">
-        {stops.map((stop) => (
-          <div
-            key={stop.id}
-            className={`bg-zinc-900 border rounded-2xl p-4 ${
-              stop.active ? "border-zinc-800" : "border-zinc-800/50 opacity-60"
-            }`}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div
-                  className={`w-2 h-2 rounded-full ${stop.active ? "bg-yellow-400" : "bg-zinc-600"}`}
-                />
-                {editingId === stop.id ? (
-                  <input
-                    type="text"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    className="bg-zinc-800 text-white text-sm rounded-lg px-2 py-1 outline-none border border-yellow-400"
-                    autoFocus
+        <div className="space-y-2">
+          {stops.map( ( stop ) => (
+            <div
+              key={stop.id}
+              className={`bg-zinc-900 border rounded-2xl p-4 ${stop.active
+                  ? "border-zinc-800"
+                  : "border-zinc-800/50 opacity-60"
+                }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div
+                    className={`w-2 h-2 rounded-full flex-shrink-0 ${stop.active ? "bg-yellow-400" : "bg-zinc-600"
+                      }`}
                   />
-                ) : (
-                  <span className="text-white text-sm font-medium">
-                    {stop.name}
+                  {editingId === stop.id ? (
+                    <input
+                      type="text"
+                      value={editName}
+                      onChange={( e ) => setEditName( e.target.value )}
+                      className="bg-zinc-800 text-white text-sm rounded-lg px-2 py-1 outline-none border border-yellow-400 w-full"
+                      autoFocus
+                    />
+                  ) : (
+                    <span className="text-white text-sm font-medium truncate">
+                      {stop.name}
+                    </span>
+                  )}
+                </div>
+                <div className="bg-zinc-800 rounded-lg px-2 py-0.5 flex-shrink-0 ml-2">
+                  <span className="text-yellow-400 text-xs font-bold">
+                    {getLiveCount( stop.id )} waiting
                   </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 mt-3">
+                {editingId === stop.id ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleRename( stop.id )}
+                      className="flex-1 bg-yellow-400 text-zinc-950 text-xs font-bold rounded-xl py-2.5 transition-colors active:bg-yellow-500"
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingId( null );
+                        setEditName( "" );
+                      }}
+                      className="flex-1 bg-zinc-800 text-zinc-300 text-xs font-semibold rounded-xl py-2.5 transition-colors active:bg-zinc-700"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingId( stop.id );
+                        setEditName( stop.name );
+                      }}
+                      className="flex-1 bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 text-zinc-300 text-xs font-semibold rounded-xl py-2.5 transition-colors"
+                    >
+                      ✏️ Rename
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggle( stop.id, !stop.active )}
+                      className={`flex-1 text-xs font-semibold rounded-xl py-2.5 transition-colors ${stop.active
+                          ? "bg-red-500/20 text-red-400 active:bg-red-500/30"
+                          : "bg-green-500/20 text-green-400 active:bg-green-500/30"
+                        }`}
+                    >
+                      {stop.active ? "⛔ Deactivate" : "✅ Activate"}
+                    </button>
+                  </>
                 )}
               </div>
-              <div className="bg-zinc-800 rounded-lg px-2 py-0.5">
-                <span className="text-yellow-400 text-xs font-bold">
-                  {getLiveCount(stop.id)} waiting
-                </span>
-              </div>
-            </div>
 
-            <div className="flex items-center gap-2 mt-3">
-              {editingId === stop.id ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => handleRename(stop.id)}
-                    className="flex-1 bg-yellow-400 text-zinc-950 text-xs font-bold rounded-xl py-2 transition-colors"
-                  >
-                    Save
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingId(null);
-                      setEditName("");
-                    }}
-                    className="flex-1 bg-zinc-800 text-zinc-300 text-xs font-semibold rounded-xl py-2 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingId(stop.id);
-                      setEditName(stop.name);
-                    }}
-                    className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold rounded-xl py-2 transition-colors"
-                  >
-                    ✏️ Rename
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleToggle(stop.id, !stop.active)}
-                    className={`flex-1 text-xs font-semibold rounded-xl py-2 transition-colors ${
-                      stop.active
-                        ? "bg-red-500/20 text-red-400"
-                        : "bg-green-500/20 text-green-400"
-                    }`}
-                  >
-                    {stop.active ? "⛔ Deactivate" : "✅ Activate"}
-                  </button>
-                </>
-              )}
+              <p className="text-zinc-600 text-xs mt-2">
+                {stop.lat.toFixed( 4 )}, {stop.lng.toFixed( 4 )}
+              </p>
             </div>
-
-            <p className="text-zinc-600 text-xs mt-2">
-              {stop.lat.toFixed(4)}, {stop.lng.toFixed(4)}
-            </p>
-          </div>
-        ))}
+          ) )}
+        </div>
       </div>
 
-      <BottomNav />
+      {/* BottomNav fixed to bottom — not in document flow */}
+      <div
+        className="fixed bottom-0 left-0 right-0 z-50"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        <BottomNav />
+      </div>
     </div>
   );
 }

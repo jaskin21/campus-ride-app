@@ -9,28 +9,32 @@ import { authService } from "../features/auth/authService";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 const registerSchema = z
-  .object({
-    firstName: z.string().min(1, "First name is required"),
-    lastName: z.string().min(1, "Last name is required"),
+  .object( {
+    firstName: z.string().min( 1, 'First name is required' ),
+    lastName: z.string().min( 1, 'Last name is required' ),
     email: z
       .string()
-      .min(1, "Email is required")
-      .pipe(z.email("Invalid email address")),
-    password: z.string().min(8, "Password must be at least 8 characters"),
-    confirmPassword: z.string().min(1, "Please confirm your password"),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  });
+      .min( 1, 'Email is required' )
+      .pipe( z.email( 'Invalid email address' ) )
+      .refine(
+        ( email ) => email.endsWith( '@umindanao.edu.ph' ),
+        'Only @umindanao.edu.ph email addresses are allowed'
+      ),
+    password: z.string().min( 8, 'Password must be at least 8 characters' ),
+    confirmPassword: z.string().min( 1, 'Please confirm your password' ),
+  } )
+  .refine( ( data ) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  } )
 
 type RegisterForm = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [step, setStep] = useState<"form" | "verify">("form");
-  const [verifyCode, setVerifyCode] = useState("");
-  const [registeredEmail, setRegisteredEmail] = useState("");
+  const [showPassword, setShowPassword] = useState( false );
+  const [step, setStep] = useState<"form" | "verify">( "form" );
+  const [verifyCode, setVerifyCode] = useState( "" );
+  const [registeredEmail, setRegisteredEmail] = useState( "" );
 
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -40,32 +44,32 @@ export default function RegisterPage() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<RegisterForm>({
-    resolver: zodResolver(registerSchema),
-  });
+  } = useForm<RegisterForm>( {
+    resolver: zodResolver( registerSchema ),
+  } );
 
-  const onSubmit = async (data: RegisterForm) => {
-    setRegisteredEmail(data.email);
+  const onSubmit = async ( data: RegisterForm ) => {
+    setRegisteredEmail( data.email );
     const result = await dispatch(
-      registerThunk({
+      registerThunk( {
         email: data.email,
         password: data.password,
         firstName: data.firstName,
         lastName: data.lastName,
-      })
+      } )
     );
 
-    if (registerThunk.fulfilled.match(result)) {
-      setStep("verify");
+    if ( registerThunk.fulfilled.match( result ) ) {
+      setStep( "verify" );
     } else {
-      const message = (result.payload as string) ?? "";
-      console.log("Rejected with:", message);
+      const message = ( result.payload as string ) ?? "";
+      console.log( "Rejected with:", message );
       if (
-        message.includes("already") ||
-        message.includes("exists") ||
-        message.includes("Username")
+        message.includes( "already" ) ||
+        message.includes( "exists" ) ||
+        message.includes( "Username" )
       ) {
-        setStep("verify");
+        setStep( "verify" );
       }
     }
   };
@@ -73,15 +77,15 @@ export default function RegisterPage() {
   const onVerify = async () => {
     try {
       await dispatch(
-        verifyThunk({ email: registeredEmail, code: verifyCode })
+        verifyThunk( { email: registeredEmail, code: verifyCode } )
       ).unwrap();
-      navigate("/login");
+      navigate( "/login" );
     } catch {
       // error shown via Redux state
     }
   };
 
-  if (step === "verify") {
+  if ( step === "verify" ) {
     return (
       <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center px-4">
         <div className="mb-8 text-center">
@@ -120,7 +124,7 @@ export default function RegisterPage() {
                 id="code"
                 type="text"
                 value={verifyCode}
-                onChange={(e) => setVerifyCode(e.target.value)}
+                onChange={( e ) => setVerifyCode( e.target.value )}
                 placeholder="Enter 6-digit code"
                 maxLength={6}
                 className="w-full bg-zinc-800 text-white text-sm rounded-xl px-4 py-3 outline-none border border-zinc-700 focus:border-yellow-400 transition-colors placeholder:text-zinc-600 tracking-widest text-center"
@@ -146,10 +150,10 @@ export default function RegisterPage() {
               type="button"
               onClick={async () => {
                 try {
-                  await authService.resendCode(registeredEmail);
-                  alert("New code sent — check your email");
-                } catch (err) {
-                  console.error(err);
+                  await authService.resendCode( registeredEmail );
+                  alert( "New code sent — check your email" );
+                } catch ( err ) {
+                  console.error( err );
                 }
               }}
               className="w-full text-yellow-400 hover:text-yellow-300 text-sm transition-colors py-2"
@@ -159,7 +163,7 @@ export default function RegisterPage() {
 
             <button
               type="button"
-              onClick={() => setStep("form")}
+              onClick={() => setStep( "form" )}
               className="w-full text-zinc-500 hover:text-zinc-300 text-sm transition-colors py-2"
             >
               ← Back to registration
@@ -190,7 +194,7 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit( onSubmit )} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label
@@ -201,7 +205,7 @@ export default function RegisterPage() {
               </label>
               <input
                 id="firstName"
-                {...register("firstName")}
+                {...register( "firstName" )}
                 type="text"
                 placeholder="Juan"
                 className="w-full bg-zinc-800 text-white text-sm rounded-xl px-4 py-3 outline-none border border-zinc-700 focus:border-yellow-400 transition-colors placeholder:text-zinc-600"
@@ -221,7 +225,7 @@ export default function RegisterPage() {
               </label>
               <input
                 id="lastName"
-                {...register("lastName")}
+                {...register( "lastName" )}
                 type="text"
                 placeholder="Dela Cruz"
                 className="w-full bg-zinc-800 text-white text-sm rounded-xl px-4 py-3 outline-none border border-zinc-700 focus:border-yellow-400 transition-colors placeholder:text-zinc-600"
@@ -243,16 +247,19 @@ export default function RegisterPage() {
             </label>
             <input
               id="email"
-              {...register("email")}
+              {...register( 'email' )}
               type="email"
-              placeholder="you@umindanao.edu.ph"
+              placeholder="yourname@umindanao.edu.ph"
               className="w-full bg-zinc-800 text-white text-sm rounded-xl px-4 py-3 outline-none border border-zinc-700 focus:border-yellow-400 transition-colors placeholder:text-zinc-600"
             />
-            {errors.email && (
-              <p className="text-red-400 text-xs mt-1">
-                {errors.email.message}
+            {!errors.email && (
+              <p className="text-zinc-600 text-xs mt-1">
+                Must be a @umindanao.edu.ph email
               </p>
             )}
+            {errors.email && (
+              <p className="text-red-400 text-xs mt-1">{errors.email.message}</p>
+            )}S
           </div>
 
           <div>
@@ -265,14 +272,14 @@ export default function RegisterPage() {
             <div className="relative">
               <input
                 id="password"
-                {...register("password")}
+                {...register( "password" )}
                 type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
                 className="w-full bg-zinc-800 text-white text-sm rounded-xl px-4 py-3 outline-none border border-zinc-700 focus:border-yellow-400 transition-colors placeholder:text-zinc-600 pr-12"
               />
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
+                onClick={() => setShowPassword( !showPassword )}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors text-xs"
               >
                 {showPassword ? "Hide" : "Show"}
@@ -294,7 +301,7 @@ export default function RegisterPage() {
             </label>
             <input
               id="confirmPassword"
-              {...register("confirmPassword")}
+              {...register( "confirmPassword" )}
               type={showPassword ? "text" : "password"}
               placeholder="••••••••"
               className="w-full bg-zinc-800 text-white text-sm rounded-xl px-4 py-3 outline-none border border-zinc-700 focus:border-yellow-400 transition-colors placeholder:text-zinc-600"

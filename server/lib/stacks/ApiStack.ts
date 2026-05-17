@@ -148,16 +148,17 @@ export class ApiStack extends cdk.Stack {
       },
     );
 
-    const jarvisChatFn = new NodejsFunction( this, "JarvisChatFn", {
+    const jarvisChatFn = new NodejsFunction( this, 'JarvisChatFn', {
       ...lambdaDefaults,
-      entry: path.join( __dirname, "../lambdas/jarvis/chat.ts" ),
-      handler: "handler",
+      entry: path.join( __dirname, '../lambdas/jarvis/chat.ts' ),
+      handler: 'handler',
+      timeout: cdk.Duration.seconds( 30 ), // ← add this
       bundling: {
-        externalModules: ["@aws-sdk/*"],
+        externalModules: ['@aws-sdk/*'],
         forceDockerBundling: false,
-        nodeModules: ["groq-sdk"],
+        nodeModules: ['groq-sdk'],
       },
-    } );
+    } )
 
     const getStudentsFn = new NodejsFunction( this, "GetStudentsFn", {
       ...lambdaDefaults,

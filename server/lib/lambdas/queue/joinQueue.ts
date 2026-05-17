@@ -1,59 +1,59 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
-import { DynamoDBDocumentClient, PutCommand, GetCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb'
+import { DynamoDBDocumentClient, PutCommand, GetCommand, DeleteCommand, QueryCommand } from '@aws-sdk/lib-dynamodb'
 import type { APIGatewayProxyHandler } from 'aws-lambda'
 import { Keys, TABLE_NAME } from '../shared/tableKeys'
 
-const client = DynamoDBDocumentClient.from(new DynamoDBClient({}))
+const client = DynamoDBDocumentClient.from( new DynamoDBClient( {} ) )
 
-export const handler: APIGatewayProxyHandler = async (event) => {
+export const handler: APIGatewayProxyHandler = async ( event ) => {
   const userId = event.requestContext.authorizer?.claims?.sub
   const email = event.requestContext.authorizer?.claims?.email
 
-  if (!userId) {
+  if ( !userId ) {
     return {
       statusCode: 401,
       headers: { 'Access-Control-Allow-Origin': '*' },
-      body: JSON.stringify({ message: 'Unauthorized' }),
+      body: JSON.stringify( { message: 'Unauthorized' } ),
     }
   }
 
-  const body = JSON.parse(event.body ?? '{}')
+  const body = JSON.parse( event.body ?? '{}' )
   const { stopId, destination } = body
 
-  if (!stopId || !destination) {
+  if ( !stopId || !destination ) {
     return {
       statusCode: 400,
       headers: { 'Access-Control-Allow-Origin': '*' },
-      body: JSON.stringify({ message: 'stopId and destination are required' }),
+      body: JSON.stringify( { message: 'stopId and destination are required' } ),
     }
   }
 
   try {
     // Check if user is already in a queue
     const existing = await client.send(
-      new GetCommand({
+      new GetCommand( {
         TableName: TABLE_NAME,
-        Key: Keys.userQueueState(userId),
-      })
+        Key: Keys.userQueueState( userId ),
+      } )
     )
 
     // If already in a queue at a different stop — remove old entry
-    if (existing.Item) {
+    if ( existing.Item ) {
       const oldStopId = existing.Item.stopId
       const oldSK = existing.Item.queueSK
 
-      if (oldStopId !== stopId) {
+      if ( oldStopId !== stopId ) {
         await client.send(
-          new DeleteCommand({
+          new DeleteCommand( {
             TableName: TABLE_NAME,
             Key: { PK: `STOP#${oldStopId}`, SK: oldSK },
-          })
+          } )
         )
       } else {
         return {
           statusCode: 409,
           headers: { 'Access-Control-Allow-Origin': '*' },
-          body: JSON.stringify({ message: 'Already in queue at this stop' }),
+          body: JSON.stringify( { message: 'Already in queue at this stop' } ),
         }
       }
     }
@@ -61,51 +61,67 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     const timestamp = new Date().toISOString()
     const queueSK = `QUEUE#${timestamp}#${userId}`
 
+    // Count existing queue entries at this stop for position
+    const queueResult = await client.send(
+      new QueryCommand( {
+        TableName: TABLE_NAME,
+        KeyConditionExpression: 'PK = :pk AND begins_with(SK, :sk)',
+        ExpressionAttributeValues: {
+          ':pk': `STOP#${stopId}`,
+          ':sk': 'QUEUE#',
+        },
+      } )
+    )
+
+    const position = ( queueResult.Count ?? 0 ) + 1
+
     // Add to stop queue
     await client.send(
-      new PutCommand({
+      new PutCommand( {
         TableName: TABLE_NAME,
         Item: {
-          ...Keys.stopQueue(stopId, timestamp, userId),
+          ...Keys.stopQueue( stopId, timestamp, userId ),
           userId,
           email,
           destination,
           joinedAt: timestamp,
           status: 'waiting',
         },
-      })
+      } )
     )
 
     // Save user queue state
     await client.send(
-      new PutCommand({
+      new PutCommand( {
         TableName: TABLE_NAME,
         Item: {
-          ...Keys.userQueueState(userId),
+          ...Keys.userQueueState( userId ),
           stopId,
           destination,
           queueSK,
           joinedAt: timestamp,
+          position,
         },
-      })
+      } )
     )
 
     return {
       statusCode: 200,
       headers: { 'Access-Control-Allow-Origin': '*' },
-      body: JSON.stringify({
+      body: JSON.stringify( {
         message: 'Joined queue',
         stopId,
         destination,
         joinedAt: timestamp,
-      }),
+        position,
+      } ),
     }
-  } catch (err) {
-    console.error(err)
+  } catch ( err ) {
+    console.error( err )
     return {
       statusCode: 500,
       headers: { 'Access-Control-Allow-Origin': '*' },
-      body: JSON.stringify({ message: 'Internal server error' }),
+      body: JSON.stringify( { message: 'Internal server error' } ),
     }
   }
 }

@@ -11,7 +11,7 @@ import BoardingAlert from '../../components/shared/BoardingAlert'
 import OffboardAlert from '../../components/shared/OffboardAlert'
 import { useAppDispatch, useAppSelector } from '../../app/hooks'
 import { useJoinQueueMutation, useLeaveQueueMutation, useConfirmBoardingMutation, useSkipBoardingMutation } from '../../features/queue/queueApi'
-import { setQueue, clearQueue, setBoarded, setOffboarded } from '../../features/queue/queueSlice'
+import { setQueue, clearQueue, setBoarded, setOffboarded, updatePosition } from '../../features/queue/queueSlice'
 import { useStopQueues } from '../../hooks/useStopQueues'
 import { useVanPosition } from '../../hooks/useVanPosition'
 import { useBoardingAlert } from '../../hooks/useBoardingAlert'
@@ -63,6 +63,37 @@ export default function StudentHomePage() {
     }
     setChangeDestOpen( false )
   }
+
+  useEffect( () => {
+    if ( !queueState.isInQueue || queueState.isBoarded ) return
+
+    let active = true
+
+    const pollPosition = async () => {
+      try {
+        const session = await fetchAuthSession()
+        const token = session.tokens?.idToken?.toString() ?? ''
+        const res = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/queue/user/active`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+        if ( !res.ok ) return
+        const data = await res.json()
+        if ( active && data.isInQueue && data.position !== queueState.position ) {
+          dispatch( updatePosition( data.position ) )
+        }
+      } catch {
+        // silent fail
+      }
+    }
+
+    pollPosition()
+    const interval = setInterval( pollPosition, 5000 )
+    return () => {
+      active = false
+      clearInterval( interval )
+    }
+  }, [queueState.isInQueue, queueState.isBoarded, queueState.position, dispatch] )
 
   // Restore queue on page load
   useEffect( () => {
