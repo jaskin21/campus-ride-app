@@ -53,6 +53,7 @@ export const handler: APIGatewayProxyHandler = async () => {
       body: JSON.stringify( {
         ...vanResult.Item,
         currentPassengers: boardedPassengers.length,
+        boardingUntil: vanResult.Item.boardingUntil,
         passengers: boardedPassengers.map( p => ( {
           userId: p.PK.replace( 'USER#', '' ),
           destination: p.destination,

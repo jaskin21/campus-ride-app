@@ -7,8 +7,8 @@ interface QueueCardProps {
 }
 
 
-export default function QueueCard({ queue, onLeave, onJoin }: QueueCardProps) {
-  if (!queue) {
+export default function QueueCard( { queue, onLeave, onJoin }: QueueCardProps ) {
+  if ( !queue ) {
     return (
       <div className="bg-zinc-900/90 backdrop-blur-sm border border-zinc-800 rounded-2xl p-4 mx-4">
         <div className="flex items-center justify-between">
@@ -52,7 +52,13 @@ export default function QueueCard({ queue, onLeave, onJoin }: QueueCardProps) {
           <p className="text-zinc-500 text-xs mt-0.5">→ {queue.destination}</p>
         </div>
         <div className="text-right">
-          <p className="text-yellow-400 text-sm font-bold">{queue.eta} min</p>
+          <p className="text-yellow-400 text-sm font-bold">
+            {( queue.eta ?? 0 ) === 0
+              ? 'Now!'
+              : ( queue.eta ?? 5 ) < 1
+                ? '<1 min'
+                : `${queue.eta ?? 5} min`}
+          </p>
           <p className="text-zinc-500 text-xs">ETA</p>
         </div>
       </div>

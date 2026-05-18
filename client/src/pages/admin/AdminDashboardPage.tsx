@@ -102,7 +102,7 @@ export default function AdminDashboardPage() {
 
       if ( action === "start" ) {
         setSimStatus( "running" );
-        simIntervalRef.current = setInterval( () => triggerVanTick( token ), 5000 );
+        simIntervalRef.current = setInterval( () => triggerVanTick( token ), 2000 )
       } else {
         setSimStatus( "idle" );
         if ( simIntervalRef.current ) {
