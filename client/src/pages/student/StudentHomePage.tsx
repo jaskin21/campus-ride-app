@@ -316,7 +316,7 @@ export default function StudentHomePage() {
         <VanMap
           stops={liveStops}
           van={liveVan}
-          userStopId={queueState.stopId ?? undefined}
+          userStopId={queueState.isInQueue && !queueState.isBoarded ? queueState.stopId ?? undefined : undefined}
         />
       </div>
 

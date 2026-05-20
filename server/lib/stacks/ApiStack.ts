@@ -235,7 +235,7 @@ export class ApiStack extends cdk.Stack {
       } ),
     );
 
-    props.userPool.grant( getStudentsFn, "cognito-idp:ListUsersInGroup" );
+    props.userPool.grant( getStudentsFn, 'cognito-idp:ListUsersInGroup', 'cognito-idp:ListUsers' )
     props.userPool.grant( createDriverFn,
       'cognito-idp:AdminCreateUser',
       'cognito-idp:AdminSetUserPassword',
